@@ -23,3 +23,7 @@ pub struct ModelWithoutId {
 pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
+
+trait HasId {
+    fn setId(self, id: i32) -> ActiveModel;
+}

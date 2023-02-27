@@ -24,5 +24,6 @@ impl crud::CrudRoutes<User, user::ActiveModel, user::ModelWithoutId> for UserRou
             .route("/", web::post().to(Self::create))
             .route("/{id}/", web::delete().to(Self::delete))
             .route("/{id}/", web::get().to(Self::get))
+            .route("/{id}/", web::patch().to(Self::update))
     }
 }
