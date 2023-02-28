@@ -1,11 +1,8 @@
-use std::future::Future;
 use crate::models::prelude::User;
-use actix_web::{web, Scope};
-use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, Select};
-use sea_orm::sea_query::ColumnRef::Column;
 use crate::models::user;
-use crate::models::user::{Entity, Model};
 use crate::routes::crud;
+use actix_web::{web, Scope};
+
 
 pub struct UserRoutes {}
 

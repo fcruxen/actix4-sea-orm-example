@@ -1,4 +1,3 @@
-#[macro_use]
 extern crate log;
 
 mod services;
@@ -11,14 +10,13 @@ use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use actix_web::web::Data;
 use services::db;
 use routes::users::UserRoutes;
-use routes::crud;
 use env_logger;
 use crate::routes::crud::CrudRoutes;
 
 
 #[get("/")]
 async fn index() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
+    HttpResponse::Ok().json("Hello world!")
 }
 
 #[actix_web::main]
