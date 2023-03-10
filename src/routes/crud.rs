@@ -2,11 +2,16 @@ use std::fmt::Debug;
 use std::str::FromStr;
 use actix_web::{HttpResponse, Scope, web};
 use actix_web::http::StatusCode;
-use sea_orm::{ActiveModelBehavior, ActiveModelTrait, DatabaseConnection, DbErr, EntityOrSelect, EntityTrait, IntoActiveModel, PrimaryKeyTrait, Value};
+use sea_orm::{ActiveModelBehavior, ActiveModelTrait, DbErr, EntityOrSelect, EntityTrait, IntoActiveModel, PrimaryKeyTrait, Value};
 use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
 use sea_orm::sea_query::ValueTuple;
+use crate::AppState;
 
+
+pub trait DefaultRoutes {
+    fn export_routes() -> Scope;
+}
 
 #[async_trait]
 pub trait CrudRoutes<T, M, N>
@@ -33,13 +38,13 @@ pub trait CrudRoutes<T, M, N>
             .json(serde_json::json!({"error": err.to_string()}))
     }
 
-    async fn update(path: web::Path<(i32,)>, record: web::Json<N>, data: web::Data<DatabaseConnection>) -> HttpResponse {
+    async fn update(path: web::Path<(i32,)>, record: web::Json<N>, data: web::Data<AppState>) -> HttpResponse {
         let id: i32 = path.into_inner().0;
-        match T::find_by_id(id).one(data.as_ref()).await {
+        match T::find_by_id(id).one(&data.db).await {
             Ok(_) => {
                 let mut updated_record = record.into_inner().clone().into_active_model();
                 updated_record.set(Self::primary_column(), Value::Int(Some(id)));
-                match updated_record.save(data.as_ref()).await {
+                match updated_record.save(&data.db).await {
                     Ok(_) => HttpResponse::Ok().status(StatusCode::ACCEPTED).json(""),
                     Err(err) => Self::default_err(err)
                 }
@@ -50,8 +55,8 @@ pub trait CrudRoutes<T, M, N>
         }
     }
 
-    async fn list(data: web::Data<DatabaseConnection>) -> HttpResponse {
-        match Self::entity().select().all(data.as_ref()).await {
+    async fn list(data: web::Data<AppState>) -> HttpResponse {
+        match Self::entity().select().all(&data.db).await {
             Ok(list) => {
                 HttpResponse::Ok().json(list)
             }
@@ -59,9 +64,9 @@ pub trait CrudRoutes<T, M, N>
         }
     }
 
-    async fn get(path: web::Path<(i32,)>, data: web::Data<DatabaseConnection>) -> HttpResponse {
+    async fn get(path: web::Path<(i32,)>, data: web::Data<AppState>) -> HttpResponse {
         let id: i32 = path.into_inner().0;
-        match  T::find_by_id(id).one(data.as_ref()).await {
+        match  T::find_by_id(id).one(&data.db).await {
             Ok(record) => {
                 HttpResponse::Ok().json(record)
             }
@@ -69,9 +74,9 @@ pub trait CrudRoutes<T, M, N>
         }
     }
 
-    async fn create(record: web::Json<N>, data: web::Data<DatabaseConnection>) -> HttpResponse {
+    async fn create(record: web::Json<N>, data: web::Data<AppState>) -> HttpResponse {
         let new_record = record.into_inner().into_active_model();
-        match new_record.save(data.as_ref()).await {
+        match new_record.save(&data.db).await {
             Ok(r) => {
                 match r.get_primary_key_value() {
                     None =>  HttpResponse::Ok().json(""),
@@ -87,15 +92,15 @@ pub trait CrudRoutes<T, M, N>
         }
     }
 
-    async fn delete(path: web::Path<(i32,)>, data: web::Data<DatabaseConnection>) -> HttpResponse {
+    async fn delete(path: web::Path<(i32,)>, data: web::Data<AppState>) -> HttpResponse {
         let id: i32 = path.into_inner().0;
-        match T::find_by_id(id).one(data.as_ref()).await {
+        match T::find_by_id(id).one(&data.db).await {
             Ok(r) => {
                 match r {
                     None => Self::default_err(DbErr::Custom(format!("Cound not find id: {}", id).to_string())),
                     Some(v) => {
                         let m: M  = v.into();
-                        match m.delete(data.as_ref()).await {
+                        match m.delete(&data.db).await {
                             Ok(_) => HttpResponse::Ok().status(StatusCode::ACCEPTED).body(""),
                             Err(err) => Self::default_err(err)
                         }
